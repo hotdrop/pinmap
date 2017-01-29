@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -39,20 +40,27 @@ public class MapsActivity extends FragmentActivity
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        //LatLng sydney = new LatLng(-34, 151);
-        //mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        //mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        // Add a marker in tokyo and move the camera
+        LatLng tokyo = new LatLng(35.681298, 139.766247);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(tokyo, 18));
+
         if (PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             //Toast.makeText(this, "必要な権限は取得済みです。", Toast.LENGTH_SHORT).show();
             Toast.makeText(this, "requestLocationUpdatesを実行", Toast.LENGTH_SHORT).show();
             mMap.setMyLocationEnabled(true);
             myLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-            myLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+            String provider = getProvider();
+            Toast.makeText(this, "Provider=" + provider, Toast.LENGTH_SHORT).show();
+            myLocationManager.requestLocationUpdates(provider, 0, 0, this);
         } else {
             confirmPermission();
         }
+    }
+
+    private String getProvider() {
+        Criteria crite = new Criteria();
+        return myLocationManager.getBestProvider(crite, true);
     }
 
     private void confirmPermission() {
@@ -90,7 +98,7 @@ public class MapsActivity extends FragmentActivity
                     //Toast.makeText(this, "権限の取得に成功しました。", Toast.LENGTH_SHORT).show();
                 mMap.setMyLocationEnabled(true);
                 myLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-                myLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+                myLocationManager.requestLocationUpdates(getProvider(), 0, 0, this);
             } else {
                 Toast.makeText(this, "権限を取得できませんでした。", Toast.LENGTH_SHORT).show();
                 //Toast.makeText(this, "permission=" + permissions[0] + " grantResults=" + grantResults[0], Toast.LENGTH_LONG).show();
@@ -99,15 +107,23 @@ public class MapsActivity extends FragmentActivity
     }
 
     @Override
+    public void onDestroy() {
+        super.onDestroy();
+        try {
+            myLocationManager.removeUpdates(this);
+        } catch(SecurityException e) {
+        }
+    }
+
+    @Override
     public void onLocationChanged(Location location) {
-        Toast.makeText(this, "LocationChanged実行", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "LocationChanged実行" , Toast.LENGTH_SHORT).show();
         LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
         mMap.addMarker(new MarkerOptions().position(myLocation).title("My Location"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 18));
         try {
             myLocationManager.removeUpdates(this);
         } catch(SecurityException e) {
-            Toast.makeText(this, "権限を取得できませんでした。", Toast.LENGTH_SHORT).show();
         }
     }
 
