@@ -40,87 +40,49 @@ public class MapsActivity extends FragmentActivity
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in tokyo and move the camera
-        LatLng tokyo = new LatLng(35.681298, 139.766247);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(tokyo, 18));
-
         if (PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            //Toast.makeText(this, "必要な権限は取得済みです。", Toast.LENGTH_SHORT).show();
-            Toast.makeText(this, "requestLocationUpdatesを実行", Toast.LENGTH_SHORT).show();
-            mMap.setMyLocationEnabled(true);
             myLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
             String provider = getProvider();
+            Location lastLocation = myLocationManager.getLastKnownLocation(provider);
+            if(lastLocation != null) {
+                setLocation(lastLocation);
+            }
+            mMap.setMyLocationEnabled(true);
             Toast.makeText(this, "Provider=" + provider, Toast.LENGTH_SHORT).show();
             myLocationManager.requestLocationUpdates(provider, 0, 0, this);
         } else {
+            setDefaultLocation();
             confirmPermission();
-        }
-    }
-
-    private String getProvider() {
-        Criteria crite = new Criteria();
-        return myLocationManager.getBestProvider(crite, true);
-    }
-
-    private void confirmPermission() {
-
-        //Toast.makeText(this, "should実行", Toast.LENGTH_SHORT).show();
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            new AlertDialog.Builder(this).setTitle("パーミッションの説明")
-                    .setMessage("このアプリを実行するにはパーミッションが必要です。")
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // これTrueもfalseも結局同じことしているので１つでいい
-                            ActivityCompat.requestPermissions(MapsActivity.this,
-                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                                    MY_LOCATION_REQUEST_CODE);
-                        }
-                    })
-                    .create()
-                    .show();
-        } else {
-            //Toast.makeText(this, "初回requestPermissions実行", Toast.LENGTH_SHORT).show();
-            ActivityCompat.requestPermissions(MapsActivity.this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    MY_LOCATION_REQUEST_CODE);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         if (requestCode == MY_LOCATION_REQUEST_CODE) {
+            // よくサンプルコードでは以下のように引数でパーミッションチェックしています。
             //if (permissions[0].equals(Manifest.permission.ACCESS_FINE_LOCATION) &&
             //        grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // 一方、パーミッションの許可ダイアログで「許可」された場合、このコールバックメソッド以降で現在位置の取得処理を
+            // 行う必要があります。
+            // 現在位置の取得はrequestLocationUpdatesを実行する必要がありますが、パーミッションチェックをやれとエラーが出ます。
+            // そこで、このメソッドに到達した時点ではすでにパーミッションが許可/拒否されていますので、引数でなくとも
+            // heckSelfPermissionを実行すればエラーも解消されますし良いかなと思って、以下のようにしています。
             if (PermissionChecker.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                     == PackageManager.PERMISSION_GRANTED) {
-                    //Toast.makeText(this, "権限の取得に成功しました。", Toast.LENGTH_SHORT).show();
                 mMap.setMyLocationEnabled(true);
                 myLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
                 myLocationManager.requestLocationUpdates(getProvider(), 0, 0, this);
             } else {
                 Toast.makeText(this, "権限を取得できませんでした。", Toast.LENGTH_SHORT).show();
-                //Toast.makeText(this, "permission=" + permissions[0] + " grantResults=" + grantResults[0], Toast.LENGTH_LONG).show();
             }
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        try {
-            myLocationManager.removeUpdates(this);
-        } catch(SecurityException e) {
         }
     }
 
     @Override
     public void onLocationChanged(Location location) {
         Toast.makeText(this, "LocationChanged実行" , Toast.LENGTH_SHORT).show();
-        LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        mMap.addMarker(new MarkerOptions().position(myLocation).title("My Location"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 18));
+        setLocation(location);
         try {
             myLocationManager.removeUpdates(this);
         } catch(SecurityException e) {
@@ -129,16 +91,63 @@ public class MapsActivity extends FragmentActivity
 
     @Override
     public void onStatusChanged(String s, int i, Bundle bundle) {
-
     }
 
     @Override
     public void onProviderEnabled(String s) {
-
     }
 
     @Override
     public void onProviderDisabled(String s) {
+    }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        try {
+            myLocationManager.removeUpdates(this);
+        } catch(SecurityException e) {
+          // removeUpdatesを使用する場合もパーミッションチェックをするか、このようにSecurityExceptionをキャッチする対応が必要です。
+          // onRequestPermissionsResultでパーミッションチェックを例にしたのでこちらはSecurityExceptionで対応します。
+          // 何もしてませんが、本当は例外に応じた後続処理を書く必要があります。
+        }
+    }
+
+    private String getProvider() {
+        Criteria criteria = new Criteria();
+        return myLocationManager.getBestProvider(criteria, true);
+    }
+
+    private void confirmPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+            new AlertDialog.Builder(this).setTitle("パーミッション説明")
+                    .setMessage("このアプリを実行するには位置情報の権限を与えてやる必要です。よろしくお願い致します。")
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // trueもfalseも結局同じrequestPermissionsを実行しているので一つにまとめるべきかも
+                            ActivityCompat.requestPermissions(MapsActivity.this,
+                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                    MY_LOCATION_REQUEST_CODE);
+                        }
+                    })
+                    .create()
+                    .show();
+        } else {
+            ActivityCompat.requestPermissions(MapsActivity.this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    MY_LOCATION_REQUEST_CODE);
+        }
+    }
+
+    private void setDefaultLocation() {
+        LatLng tokyo = new LatLng(35.681298, 139.766247);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(tokyo, 18));
+    }
+
+    private void setLocation(Location location) {
+        LatLng myLocation = new LatLng(location.getLatitude(), location.getLongitude());
+        mMap.addMarker(new MarkerOptions().position(myLocation).title("now Location"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 18));
     }
 }
