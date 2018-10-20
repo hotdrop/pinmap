@@ -1,4 +1,13 @@
 <resources>
     <string name="app_name">PinMap</string>
     <string name="title_activity_maps">Map</string>
+    <string name="receive_location_failure_message">位置情報の取得に失敗しました。</string>
+
+    <string name="permission_location_denied">
+        このアプリは位置情報の取得権限が拒否されています。
+        \n位置情報を取得するにはアプリの設定から権限を与えてください。
+    </string>
+    <string name="permission_location_rationale_title">位置情報の権限許可</string>
+    <string name="permission_location_rationale">このアプリは位置情報の取得権限を与えることでより便利な機能を利用できます。</string>
+    <string name="permission_location_never_ask">このアプリは位置情報の取得権限が拒否されています。</string>
 </resources>

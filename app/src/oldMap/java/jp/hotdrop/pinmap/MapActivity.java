@@ -21,11 +21,12 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends FragmentActivity
+public class MapActivity extends FragmentActivity
         implements OnMapReadyCallback, ActivityCompat.OnRequestPermissionsResultCallback, LocationListener {
 
     private static final int MY_LOCATION_REQUEST_CODE = 1000;
     private GoogleMap mMap;
+    // TODO LocationManagerは使うべきではない
     private LocationManager myLocationManager;
 
     @Override
@@ -74,7 +75,7 @@ public class MapsActivity extends FragmentActivity
                 myLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
                 myLocationManager.requestLocationUpdates(getProvider(), 0, 0, this);
             } else {
-                Toast.makeText(this, "権限を取得できませんでした。", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.permission_location_denied), Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -120,21 +121,21 @@ public class MapsActivity extends FragmentActivity
 
     private void confirmPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            new AlertDialog.Builder(this).setTitle("パーミッション説明")
-                    .setMessage("このアプリを実行するには位置情報の権限を与えてやる必要です。よろしくお願い致します。")
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.permission_location_rationale_title)
+                    .setMessage(R.string.permission_location_rationale)
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             // trueもfalseも結局同じrequestPermissionsを実行しているので一つにまとめるべきかも
-                            ActivityCompat.requestPermissions(MapsActivity.this,
+                            ActivityCompat.requestPermissions(MapActivity.this,
                                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                                     MY_LOCATION_REQUEST_CODE);
                         }
                     })
-                    .create()
                     .show();
         } else {
-            ActivityCompat.requestPermissions(MapsActivity.this,
+            ActivityCompat.requestPermissions(MapActivity.this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     MY_LOCATION_REQUEST_CODE);
         }
