@@ -106,7 +106,7 @@ class MapActivity: AppCompatActivity() {
     // 1度失敗した場合はコールバックで位置情報を受け取る。
     // そのため、設定したコールバックをonStopなどで解除する必要があるのでClientとCallbackをフィールドに持つ。
     private var fusedLocationClient: FusedLocationProviderClient? = null
-    private val locationCallback by lazy {
+    private val locationCallback: LocationCallback by lazy {
         (object: LocationCallback() {
             override fun onLocationResult(p0: LocationResult?) {
                 super.onLocationResult(p0)
